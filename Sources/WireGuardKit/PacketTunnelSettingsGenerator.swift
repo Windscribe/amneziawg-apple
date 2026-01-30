@@ -96,6 +96,18 @@ class PacketTunnelSettingsGenerator {
         if let specialJunk5 = tunnelConfiguration.interface.specialJunk5 {
             wgSettings.append("i5=\(specialJunk5)\n")
         }
+        if let controlledJunk1 = tunnelConfiguration.interface.controlledJunk1 {
+            wgSettings.append("j1=\(controlledJunk1)\n")
+        }
+        if let controlledJunk2 = tunnelConfiguration.interface.controlledJunk2 {
+            wgSettings.append("j2=\(controlledJunk2)\n")
+        }
+        if let controlledJunk3 = tunnelConfiguration.interface.controlledJunk3 {
+            wgSettings.append("j3=\(controlledJunk3)\n")
+        }
+        if let specialHandshakeTimeout = tunnelConfiguration.interface.specialHandshakeTimeout {
+            wgSettings.append("itime=\(specialHandshakeTimeout)\n")
+        }
         if !tunnelConfiguration.peers.isEmpty {
             wgSettings.append("replace_peers=true\n")
         }
@@ -132,7 +144,9 @@ class PacketTunnelSettingsGenerator {
          */
         let networkSettings = NEPacketTunnelNetworkSettings(tunnelRemoteAddress: "127.0.0.1")
 
-        if !tunnelConfiguration.interface.dnsSearch.isEmpty || !tunnelConfiguration.interface.dns.isEmpty {
+        if let dnsSettings = tunnelConfiguration.dnsSettings {
+                networkSettings.dnsSettings = dnsSettings
+        } else if !tunnelConfiguration.interface.dnsSearch.isEmpty || !tunnelConfiguration.interface.dns.isEmpty {
             let dnsServerStrings = tunnelConfiguration.interface.dns.map { $0.stringRepresentation }
             let dnsSettings = NEDNSSettings(servers: dnsServerStrings)
             dnsSettings.searchDomains = tunnelConfiguration.interface.dnsSearch
@@ -151,7 +165,7 @@ class PacketTunnelSettingsGenerator {
          * add a nob, maybe, or iOS will do probing for us.
          */
         if mtu == 0 {
-            #if os(iOS)
+            #if os(iOS) || os(tvOS)
             networkSettings.mtu = NSNumber(value: 1280)
             #elseif os(macOS)
             networkSettings.tunnelOverheadBytes = 80

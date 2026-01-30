@@ -2,11 +2,13 @@
 // Copyright © 2018-2023 WireGuard LLC. All Rights Reserved.
 
 import Foundation
+import NetworkExtension
 
 public final class TunnelConfiguration {
     public var name: String?
     public var interface: InterfaceConfiguration
     public var peers: [PeerConfiguration]
+    public var dnsSettings: NEDNSSettings?
 
     public init(name: String?, interface: InterfaceConfiguration, peers: [PeerConfiguration]) {
         self.interface = interface

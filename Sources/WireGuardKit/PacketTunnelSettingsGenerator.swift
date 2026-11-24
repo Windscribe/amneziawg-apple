@@ -55,7 +55,8 @@ class PacketTunnelSettingsGenerator {
             wgSettings.append("jmin=\(junkPacketMinSize)\n")
         }
         if let junkPacketMaxSize = tunnelConfiguration.interface.junkPacketMaxSize {
-            wgSettings.append("jmax=\(junkPacketMaxSize)\n")
+            let clampedMax = max(tunnelConfiguration.interface.junkPacketMinSize ?? 0, junkPacketMaxSize)
+            wgSettings.append("jmax=\(clampedMax)\n")
         }
         if let initPacketJunkSize = tunnelConfiguration.interface.initPacketJunkSize {
             wgSettings.append("s1=\(initPacketJunkSize)\n")
@@ -143,21 +144,26 @@ class PacketTunnelSettingsGenerator {
         }
 
         let mtu = tunnelConfiguration.interface.mtu ?? 0
+        let s4 = tunnelConfiguration.interface.transportPacketJunkSize ?? 0
+        let hasAwg = (tunnelConfiguration.interface.junkPacketCount ?? 0) > 0 ||
+            s4 > 0 ||
+            (tunnelConfiguration.interface.initPacketJunkSize ?? 0) > 0
 
-        /* 0 means automatic MTU. In theory, we should just do
-         * `networkSettings.tunnelOverheadBytes = 80` but in
-         * practice there are too many broken networks out there.
-         * Instead set it to 1280. Boohoo. Maybe someday we'll
-         * add a nob, maybe, or iOS will do probing for us.
-         */
         if mtu == 0 {
             #if os(iOS)
             networkSettings.mtu = NSNumber(value: 1280)
             #elseif os(macOS)
-            networkSettings.tunnelOverheadBytes = 80
+            if hasAwg {
+                networkSettings.mtu = NSNumber(value: 1280)
+            } else {
+                networkSettings.tunnelOverheadBytes = NSNumber(value: 80 + Int(s4))
+            }
             #else
             #error("Unimplemented")
             #endif
+        } else if s4 > 0 {
+            let safeMtu = min(Int(mtu), max(1280, 1500 - 80 - Int(s4)))
+            networkSettings.mtu = NSNumber(value: safeMtu)
         } else {
             networkSettings.mtu = NSNumber(value: mtu)
         }
